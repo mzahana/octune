@@ -204,7 +204,7 @@ class BackProbOptimizer:
                 sda_corrected = self._sda/(1.0-self._beta2**iter)
                 new_a = self._a[1:] - self._alpha * vda_corrected/(np.sqrt(sda_corrected)+self._eps)
                 self._new_a = self._a
-                self._new_a[1:] = new_a
+                self._new_a[1:] = new_a # first element a[0] is always = 1
 
                 
                 # updating b_i
@@ -215,9 +215,12 @@ class BackProbOptimizer:
                 sdb_corrected = self._sdb/(1.0-self._beta2**iter)
                 new_b = self._b - self._alpha * vdb_corrected/(np.sqrt(sdb_corrected)+self._eps)
                 self._new_b = new_b
+
+                return True
             else:
                 # TODO Use regular gradient descent algorithm
-                pass
+                print("\n[WARNING] [update] Regular gradient descent is not yet implemented.\n")
+                return False
 
     def setSignals(self, r=None, u=None, y=None):
         """Setter function for the system signals.
