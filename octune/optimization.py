@@ -41,6 +41,7 @@ class BackProbOptimizer:
         self._debug=True    # Print debug messages
 
         # System signals
+        self._r=None        # System's reference signal
         self._y=None        # System output
         self._u=None        # Controller output
 
@@ -75,6 +76,9 @@ class BackProbOptimizer:
             print("[DEBUG] [backward] Executing backward()...")
 
         # Sanity checks
+        if (self._r is None):
+            print("[ERROR] [backward] System reference signal r is None.")
+            return False
         if (self._u is None):
             print("[ERROR] [backward] controller output signal u is None.")
             return False
@@ -85,6 +89,10 @@ class BackProbOptimizer:
             print("[ERROR] [backward] Lengths of controller output signal u and system output signal y are not equal.")
             print("[ERROR] [backward] len(u)={}, len(y)={}".format(len(self._u), len(self._y)))
             return False
+        if (len(self._r) != len(self._y)):
+            print("[ERROR] [backward] Lengths of system reference signal r and system output signal y are not equal.")
+            print("[ERROR] [backward] len(u)={}, len(y)={}".format(len(self._r), len(self._y)))
+            return False
 
         if (self._a is None):
             print("[ERROR] [backward] a coeffs are None.")
@@ -94,6 +102,10 @@ class BackProbOptimizer:
             return False
 
         # TODO implement the backward probagation steps
+
+        # Compute error
+
+        return True
 
 
     def update(self, iter=None):
@@ -128,7 +140,7 @@ class BackProbOptimizer:
                 # Use regular gradient descent algorithm
                 pass
 
-    def set_u(self, u=None):
+    def setU(self, u=None):
         """This is a setter function for class variable _u, controller output.
 
         @param u array of controller output u. It should have similar length as system output y
@@ -136,16 +148,16 @@ class BackProbOptimizer:
         @return True if successful, False if not
         """
         if (u is None):
-            print("[ERROR] [set_u] u is None.")
+            print("[ERROR] [setU] u is None.")
             return False
         self._u = u
 
         if (self._debug):
-            print("[DEBUG] [set_u] u is set and of length {}".format(len(self._u)))
+            print("[DEBUG] [setU] u is set and of length {}".format(len(self._u)))
 
         return True
 
-    def set_y(self, y=None):
+    def setY(self, y=None):
         """This is a setter function for class variable _y, system output.
 
         @param y array of controller output y. It should have similar length as system output u
@@ -153,39 +165,39 @@ class BackProbOptimizer:
         @return True if successful, False if not
         """
         if (y is None):
-            print("[ERROR] [set_y] y is None.")
+            print("[ERROR] [setY] y is None.")
             return False
         self._y = y
 
         if (self._debug):
-            print("[DEBUG] [set_y] y is set and of length {}".format(len(self._y)))
+            print("[DEBUG] [setY] y is set and of length {}".format(len(self._y)))
             
         return True
 
-    def set_cont_coeffs(self, a=None, b=None):
+    def setContCoeffs(self, a=None, b=None):
         """Setter function for controller coeffs a,b
 
         @return True if successful, False if not
         """
         if (a is None):
-            print("[ERROR] [set_cont_coeffs] a is None.")
+            print("[ERROR] [setContCoeffs] a is None.")
             return False
         if (b is None):
-            print("[ERROR] [set_cont_coeffs] b is None.")
+            print("[ERROR] [setContCoeffs] b is None.")
             return False
         if (a[0] != 1):
-            print("[ERROR] [set_cont_coeffs] a[0] is not 1.")
+            print("[ERROR] [setContCoeffs] a[0] is not 1.")
             return False
 
         self._a = a
         self._b = b
 
-    def get_new_cont_coeff(self):
+    def getNewContCoeff(self):
         """Returns _new_a, _new_b
         """
         return self._new_a, self._new_b
 
-    def get_derivatives(self):
+    def getDerivatives(self):
         """Return _dL_dy, _dL_du, _dL_da, _dL_db
         """
         return self._dL_dy, self._dL_du, self._dL_da, self._dL_db

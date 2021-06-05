@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Learn more: https://github.com/mzahana/octune
+# Reference for Python package structuring (https://www.pythonforthelab.com/blog/how-create-setup-file-your-project/)
 
 from setuptools import setup, find_packages
 
@@ -14,11 +15,22 @@ with open('LICENSE') as f:
 setup(
     name='octune',
     version='0.1.0',
-    description='Backprobagation-based online linear control tuning.',
+    description='Backprobagation-based  data-driven online linear control tuning for unknown system.',
     long_description=readme,
     author='Mohamed Abdelkader',
     author_email='mohamedashraf123@gmail.com',
     url='https://github.com/mzahana/online_control_tuning',
     license=license,
-    packages=find_packages(exclude=('tests', 'docs'))
+    packages=find_packages(exclude=('tests', 'docs')),
+    entry_points={
+        'console_scripts': [
+            'octune_main=octune.__main__:main',
+        ]
+    },
+    install_requires=[
+        'numpy',
+        'scipy',
+        'control',
+        'matplotlib'
+    ]
 )
