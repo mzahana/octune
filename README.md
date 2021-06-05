@@ -1,2 +1,2 @@
-# online_control_tuning
-This repository contains an implementation of online and real-time linear control tuning using backprobagation algorithms.
+# OCTUNE: Online Control Tuning
+OCTUNE is light-weight online optimal control tuning using backprobagation techniques with guranteed closed-loop stability.
