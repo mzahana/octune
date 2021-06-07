@@ -118,9 +118,9 @@ class BackProbOptimizer:
             return False
 
         # TODO implement the backward probagation steps
-        self._r = np.reshape(self._r, (len(self._r),1) )
-        self._u = np.reshape(self._u, (len(self._u),1) )
-        self._y = np.reshape(self._y, (len(self._y),1) )
+        # self._r = np.reshape(self._r, (1,len(self._r)) )
+        # self._u = np.reshape(self._u, (1,len(self._u)) )
+        # self._y = np.reshape(self._y, (1,len(self._y)) )
 
         # Compute objective
         self._objective = 0.5 * np.linalg.norm(self._r - self._y)**2
@@ -142,7 +142,7 @@ class BackProbOptimizer:
         dy_du = np.nan_to_num(dy_du)
 
         # Partial derivatives w.r.t conroller numerator coeffs, b
-        dtype_np = self._error.numpy().dtype
+        dtype_np = self._error.dtype
         d0_np = np.array([1.0], dtype=dtype_np)
         n_b = len(self._b) # Number of b coeffs
         T = len(self._error) # Number of time steps
@@ -152,7 +152,9 @@ class BackProbOptimizer:
         for idx_coeff in range(1, n_b):
             db[idx_coeff:, idx_coeff] = db[:-idx_coeff, 0]
 
-        self._dL_db = np.sum(self._dL_dy * dy_du * db, axis=0)
+        dL_dy = np.reshape(self._dL_dy, (len(self._dL_dy), 1))
+        dy_du = np.reshape(dy_du, (len(dy_du), 1))
+        self._dL_db = np.sum(dL_dy * dy_du * db, axis=0)
 
         # Partial derivatives w.r.t conroller denominator coeffs, a
         # Compute forward sensitivities w.r.t. the controller's a_i parameters
@@ -165,7 +167,10 @@ class BackProbOptimizer:
 
         # Note that the gradient dL_da does not include the one for a[0], because it's constant, a[0]=1
         # dL_da[0] is the derivative of L w.r.t. a[1]
-        self._dL_da = np.sum(self._dL_dy * dy_du * da, axis=0)
+        self._dL_da = np.sum(dL_dy * dy_du * da, axis=0)
+
+        if(self._debug):
+            print("\n[DEBUG] [backward] Done with back probagation\n")
 
         return True
 
@@ -185,9 +190,6 @@ class BackProbOptimizer:
         # sanity checks
         if (iter is None):
             print("[ERROR] [update] iteration number is None")
-            return False
-        if (self._dL_da is None):
-            print("[ERROR] [update] partial derivatives dL_da is None.")
             return False
 
         if (self._debug):
@@ -216,12 +218,16 @@ class BackProbOptimizer:
                 new_b = self._b - self._alpha * vdb_corrected/(np.sqrt(sdb_corrected)+self._eps)
                 self._new_b = new_b
 
+                if(self._debug):
+                    print("\n[DEBUG] [update] Done with update step\n")
+                    
                 return True
             else:
                 # TODO Use regular gradient descent algorithm
                 print("\n[WARNING] [update] Regular gradient descent is not yet implemented.\n")
                 return False
 
+    ################## Setter functions ##################
     def setSignals(self, r=None, u=None, y=None):
         """Setter function for the system signals.
         Updates self._r, self._u, self._y
@@ -303,6 +309,8 @@ class BackProbOptimizer:
 
         self._a = den_coeff
         self._b = num_coeff
+
+    ################ Getter functions ################
 
     def getNewContCoeff(self):
         """Returns _new_a, _new_b

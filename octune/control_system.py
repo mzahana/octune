@@ -251,6 +251,38 @@ class ControlSystem:
 
         return True
 
+    def getPIDGainsFromCoeff(self,n0, n1, n2):
+        """Computes Kp,Ki,Kd of a discrete PID controller from its transfer function's numerator coeff
+        Numerator is of the form n0*Z^2+n1*Z+n2
+
+        @return kp,ki,kd
+        """
+        if(not self._dt>0):
+            print("[ERROR] [getPIDGainsFromCoeff] sampling time should be >0")
+            return
+
+        dt=self._dt
+
+        kd=dt*n2
+        ki=(n0+n1+n2)/dt
+        kp=(n0+n1-n2)/2
+
+        return kp,ki,kd
+
+    def getPIDCoeffFromGains(self, kp, ki, kd):
+        """Computes transfer function's numerator of a discrete PID from its gains.
+        The denominator is constant Z^2+Z+0
+        The numnerator is of the form n0*Z^2+n1*Z+n2
+
+        @return n0,n1,n2
+        """
+        dt=self._dt
+        # Numerator coeff
+        n0=kp+ki*dt/2+kd/dt
+        n1=-kp+ki*dt/2-2*kd/dt
+        n2=kd/dt
+        return n0,n1,n2
+
 def test():
     obj=ControlSystem()
     dt=0.01
