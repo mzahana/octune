@@ -67,7 +67,7 @@ class BackProbOptimizer:
         # Optimization learning rate
         self._alpha=0.001
 
-        # TODO ADAM optimizer variables
+        # ADAM optimizer variables
         self._use_adam=True # True: Use  ADAM algorithm (recommended); False: Use regular gradient descent aglrithm
         self._beta1=0.9
         self._beta2=0.999
@@ -117,19 +117,14 @@ class BackProbOptimizer:
             print("[ERROR] [backward] b coeffs are None.")
             return False
 
-        # TODO implement the backward probagation steps
-        # self._r = np.reshape(self._r, (1,len(self._r)) )
-        # self._u = np.reshape(self._u, (1,len(self._u)) )
-        # self._y = np.reshape(self._y, (1,len(self._y)) )
-
-        # Compute objective
-        self._objective = 0.5 * np.linalg.norm(self._r - self._y)**2
-
         # compute error
         self._error = self._r - self._y
+        # Compute objective
+        self._objective = 0.5 * np.linalg.norm(self._error)**2
 
         # Partial derivatives w.r.t system output, y
-        self._dL_dy = -1.0 * (self._r - self._y)
+        self._dL_dy = -1.0 * (self._error)
+        dL_dy = np.reshape(self._dL_dy, (len(self._dL_dy), 1))
 
         # Partial derivatives w.r.t controller output, u
         # This is computed numerically using finite differences
@@ -137,9 +132,10 @@ class BackProbOptimizer:
         u_shifted[0]=0.0
         y_shifted = np.roll(self._y,1)
         y_shifted[0]=0.0
-        dy_du = y_shifted/u_shifted
+        dy_du = (self._y-y_shifted)/(self._u-u_shifted)
         # Handle inf/nan elements (for now, replace nan by 0, inf by a large number and copy sign)
-        dy_du = np.nan_to_num(dy_du)
+        dy_du = np.nan_to_num(dy_du, posinf=0.0, neginf=0.0)
+        dy_du = np.reshape(dy_du, (len(dy_du), 1))
 
         # Partial derivatives w.r.t conroller numerator coeffs, b
         dtype_np = self._error.dtype
@@ -151,9 +147,7 @@ class BackProbOptimizer:
         db[:, 0] = sp.signal.lfilter(d0_np, self._a, self._error)
         for idx_coeff in range(1, n_b):
             db[idx_coeff:, idx_coeff] = db[:-idx_coeff, 0]
-
-        dL_dy = np.reshape(self._dL_dy, (len(self._dL_dy), 1))
-        dy_du = np.reshape(dy_du, (len(dy_du), 1))
+        
         self._dL_db = np.sum(dL_dy * dy_du * db, axis=0)
 
         # Partial derivatives w.r.t conroller denominator coeffs, a
@@ -205,7 +199,8 @@ class BackProbOptimizer:
                 vda_corrected = self._vda/(1.0-self._beta1**iter)
                 sda_corrected = self._sda/(1.0-self._beta2**iter)
                 new_a = self._a[1:] - self._alpha * vda_corrected/(np.sqrt(sda_corrected)+self._eps)
-                self._new_a = self._a
+                self._new_a = np.zeros(len(self._a))
+                self._new_a[0]=1.0
                 self._new_a[1:] = new_a # first element a[0] is always = 1
 
                 
@@ -226,6 +221,9 @@ class BackProbOptimizer:
                 # TODO Use regular gradient descent algorithm
                 print("\n[WARNING] [update] Regular gradient descent is not yet implemented.\n")
                 return False
+        else:
+            print("\n[ERROR] [update] Error in backward(). Returned False\n")
+            return False
 
     ################## Setter functions ##################
     def setSignals(self, r=None, u=None, y=None):
