@@ -1,4 +1,3 @@
-from typing import final
 from matplotlib.legend import Legend
 from numpy import ldexp
 import matplotlib.pyplot as plt

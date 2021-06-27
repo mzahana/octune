@@ -19,7 +19,7 @@ setup(
     long_description=readme,
     author='Mohamed Abdelkader',
     author_email='mohamedashraf123@gmail.com',
-    url='https://github.com/mzahana/online_control_tuning',
+    url='https://github.com/mzahana/octune',
     license=license,
     packages=find_packages(exclude=('tests', 'docs')),
     entry_points={
@@ -28,9 +28,6 @@ setup(
         ]
     },
     install_requires=[
-        'numpy',
-        'scipy',
-        'control',
-        'matplotlib'
+        'control'
     ]
 )
