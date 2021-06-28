@@ -28,6 +28,7 @@ setup(
         ]
     },
     install_requires=[
-        'control==0.8.4'
+        'numpy==1.21.0'
+        "control==0.8.4;python_version<'3.4'",
     ]
 )
