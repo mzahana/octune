@@ -134,7 +134,8 @@ class BackProbOptimizer:
         y_shifted[0]=0.0
         dy_du = (self._y-y_shifted)/(self._u-u_shifted)
         # Handle inf/nan elements (for now, replace nan by 0, inf by a large number and copy sign)
-        dy_du = np.nan_to_num(dy_du, posinf=0.0, neginf=0.0)
+        #dy_du = np.nan_to_num(dy_du, posinf=0.0, neginf=0.0)
+        dy_du = np.nan_to_num(dy_du)
         dy_du = np.reshape(dy_du, (len(dy_du), 1))
 
         # Partial derivatives w.r.t conroller numerator coeffs, b
@@ -143,7 +144,8 @@ class BackProbOptimizer:
         n_b = len(self._b) # Number of b coeffs
         T = len(self._error) # Number of time steps
         # Compute forward sensitivities w.r.t. the controller's b_i parameters
-        db = np.zeros_like(self._error, shape=(T,n_b)) # [T, n_b]
+        #db = np.zeros_like(self._error, shape=(T,n_b)) # [T, n_b]
+        db = np.zeros( (T,n_b) )
         db[:, 0] = sp.signal.lfilter(d0_np, self._a, self._error)
         for idx_coeff in range(1, n_b):
             db[idx_coeff:, idx_coeff] = db[:-idx_coeff, 0]
@@ -154,7 +156,8 @@ class BackProbOptimizer:
         # Compute forward sensitivities w.r.t. the controller's a_i parameters
         n_a = len(self._a) # Number of a coeffs
         d1_np = np.array([0.0, 1.0], dtype=dtype_np)
-        da = np.zeros_like(self._error, shape=(T,n_a-1)) # [T, n_a-1], remove the 1st element since it's constant, a[0]=1
+        #da = np.zeros_like(self._error, shape=(T,n_a-1)) # [T, n_a-1], remove the 1st element since it's constant, a[0]=1
+        da = np.zeros((T,n_a-1))
         da[:, 0] = sp.signal.lfilter(d1_np, self._a, -self._u)
         for idx_coeff in range(1, n_a-1):
             da[idx_coeff:, idx_coeff] = da[:-idx_coeff, 0]
