@@ -28,9 +28,12 @@ setup(
         ]
     },
     install_requires=[
+<<<<<<< HEAD
         "numpy;python_version<='2.7'",
         "scipy;python_version<='2.7'",
         "matplotlib;python_version<='2.7'",
+=======
+>>>>>>> cc7341a8fd927719e103842e52b40105a1b6f783
         "control==0.8.4;python_version<='2.7'",
     ]
 )
