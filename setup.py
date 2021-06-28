@@ -28,6 +28,6 @@ setup(
         ]
     },
     install_requires=[
-        'control'
+        'control==0.8.4'
     ]
 )
