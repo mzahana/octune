@@ -1,5 +1,4 @@
 from matplotlib.legend import Legend
-from numpy import ldexp
 import matplotlib.pyplot as plt
 from octune.optimization import BackProbOptimizer
 from octune.control_system import ControlSystem
@@ -14,7 +13,7 @@ def main():
 
     ############ Controller ############
     cnt=ControlSystem()
-    cnt.setDebug(val=dt)
+    cnt.setDebug(val=False)
     
     # Build a stable discrete plant with two real poles within the unit circle
     # denominator z^2+(pole1+pole2)z+(pole1*pole2
