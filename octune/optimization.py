@@ -30,12 +30,11 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import numpy as np
-from numpy.lib.function_base import select
-import scipy as sp
-# import scipy.signal
+import scipy
+import scipy.signal
 
 class BackProbOptimizer:
-    """Implements backprobagation techniques to optimize a linear controller for an unkown system, given system & controller output data.
+    """Implements backprobagation techniques to optimize a linear controller for an unkown dynamical system, given desired/reference signal, system & controller output data.
     Reference: TODO include a reference paper (possibly on arxiv)
     """
     def __init__(self):
@@ -49,8 +48,8 @@ class BackProbOptimizer:
         # Controller paramaers, to be optimized
         self._a=None        # Denomenator coeffs. _a[0]=1
         self._b=None        # Numerator coeffs
-        self._new_a=None# Updated a (denominator) coeffs after performing backward probagation
-        self._new_b=None# Updated b (numerator) coeffs after performing backward probagation
+        self._new_a=None    # Updated a (denominator) coeffs after performing backward probagation
+        self._new_b=None    # Updated b (numerator) coeffs after performing backward probagation
 
         # Partial derivatives
         self._dL_dy=None    # Partial derivatives w.r.t to system output y
@@ -60,15 +59,15 @@ class BackProbOptimizer:
 
         # Optimization objective function
         self._objective=None
-        # Error array between reference signal and systen output
+        # Error array between reference signal _r and system output _y
         self._error=None
 
 
         # Optimization learning rate
         self._alpha=0.001
 
-        # ADAM optimizer variables
-        self._use_adam=True # True: Use  ADAM algorithm (recommended); False: Use regular gradient descent aglrithm
+        # ADAM optimizer parameters
+        self._use_adam=True # True: Use  ADAM algorithm (recommended); False: Use regular gradient descent algorithm
         self._beta1=0.9
         self._beta2=0.999
         self._eps=10e-8
@@ -85,7 +84,7 @@ class BackProbOptimizer:
 
         Updates _dL_da, _dL_db, _dL_dy, _dL_du
 
-        @return True: if sccessful, False if not
+        @return True: if successful, False if not
         """
 
         if (self._debug):
@@ -146,7 +145,7 @@ class BackProbOptimizer:
         # Compute forward sensitivities w.r.t. the controller's b_i parameters
         #db = np.zeros_like(self._error, shape=(T,n_b)) # [T, n_b]
         db = np.zeros( (T,n_b) )
-        db[:, 0] = sp.signal.lfilter(d0_np, self._a, self._error)
+        db[:, 0] = scipy.signal.lfilter(d0_np, self._a, self._error)
         for idx_coeff in range(1, n_b):
             db[idx_coeff:, idx_coeff] = db[:-idx_coeff, 0]
         
@@ -158,7 +157,7 @@ class BackProbOptimizer:
         d1_np = np.array([0.0, 1.0], dtype=dtype_np)
         #da = np.zeros_like(self._error, shape=(T,n_a-1)) # [T, n_a-1], remove the 1st element since it's constant, a[0]=1
         da = np.zeros((T,n_a-1))
-        da[:, 0] = sp.signal.lfilter(d1_np, self._a, -self._u)
+        da[:, 0] = scipy.signal.lfilter(d1_np, self._a, -self._u)
         for idx_coeff in range(1, n_a-1):
             da[idx_coeff:, idx_coeff] = da[:-idx_coeff, 0]
 
@@ -227,6 +226,38 @@ class BackProbOptimizer:
         else:
             print("\n[ERROR] [update] Error in backward(). Returned False\n")
             return False
+
+    def maxSensitivity(self, dt=None, freq_min=None, freq_max=None):
+        """Computes the maximum sensitivity of the closed loop discrete system based on
+            * Input/output signals (self._u, self._y)
+            * Desired frequency range
+            * Sampling time
+        @param dt sampling time in seconds
+        @param freq_min Minimum frequency in rad/s. Used to compute the Discrete Fourier Transform of the input/output signals, and frequency response of the controller
+        @param freq_max Maximum frequency in rad/s. Used to compute the Discrete Fourier Transform of the input/output signals, and frequency response of the controller
+
+        @return Maximum sensitivity
+        """
+
+        # Sanity checks
+        if (dt is None):
+            print("\n[ERROR] [maxSensitivity] Sampling time is None\n")
+            return -1
+        if (freq_min is None):
+            print("\n[ERROR] [maxSensitivity] freq_min is None\n")
+            return -1
+        if (freq_max is None):
+            print("\n[ERROR] [maxSensitivity] freq_max is None\n")
+            return -1
+
+        # 1- Compute DFT of input/output signals
+        n = len(self._u)                                # Signal length
+        u_fft = np.fft.fft(self._u, n)                  # Compute FFT
+        y_fft = np.fft.fft(self._y, n)
+        freq = (1/(dt*n)) * np.arange(n)                # Create array of frequencies
+        L = np.arange(1, np.floor(n/2), dtype='int')    # Select first half of the frequencies (symmetry)
+
+        ## compute controller at freq
 
     ################## Setter functions ##################
     def setSignals(self, r=None, u=None, y=None):
