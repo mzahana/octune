@@ -227,37 +227,91 @@ class BackProbOptimizer:
             print("\n[ERROR] [update] Error in backward(). Returned False\n")
             return False
 
-    def maxSensitivity(self, dt=None, freq_min=None, freq_max=None):
+    def maxSensitivity(self, dt=None):
         """Computes the maximum sensitivity of the closed loop discrete system based on
             * Input/output signals (self._u, self._y)
             * Desired frequency range
             * Sampling time
         @param dt sampling time in seconds
-        @param freq_min Minimum frequency in rad/s. Used to compute the Discrete Fourier Transform of the input/output signals, and frequency response of the controller
-        @param freq_max Maximum frequency in rad/s. Used to compute the Discrete Fourier Transform of the input/output signals, and frequency response of the controller
 
-        @return Maximum sensitivity
+        @return s_max Maximum sensitivity
+        @return omega_max frequency at maximum sensitivity, rad/s
+        @return f_max frequency at maximum sensitivity, Hz
         """
-
+        s_max = None
+        omega_max = None
+        f_max = None
+        ret = (s_max, omega_max, f_max)
         # Sanity checks
         if (dt is None):
             print("\n[ERROR] [maxSensitivity] Sampling time is None\n")
-            return -1
-        if (freq_min is None):
-            print("\n[ERROR] [maxSensitivity] freq_min is None\n")
-            return -1
-        if (freq_max is None):
-            print("\n[ERROR] [maxSensitivity] freq_max is None\n")
-            return -1
+            return ret
+        if (self._r is None):
+            print("\n[ERROR] [maxSensitivity] Reference signal self._r is None\n")
+            return ret
+        if (self._u is None):
+            print("\n[ERROR] [maxSensitivity] Controller's output signal self._u is None\n")
+            return ret
+        if (self._y is None):
+            print("\n[ERROR] [maxSensitivity] System's output signal self._y is None\n")
+            return ret
 
         # 1- Compute DFT of input/output signals
-        n = len(self._u)                                # Signal length
-        u_fft = np.fft.fft(self._u, n)                  # Compute FFT
-        y_fft = np.fft.fft(self._y, n)
-        freq = (1/(dt*n)) * np.arange(n)                # Create array of frequencies
+        n = len(self._u)                                # Signal length. Should be the same as _y, _r
         L = np.arange(1, np.floor(n/2), dtype='int')    # Select first half of the frequencies (symmetry)
 
-        ## compute controller at freq
+        u_fft_full = np.fft.fft(self._u, n)             # Compute FFT
+        u_fft = u_fft_full[L]
+
+        y_fft_full = np.fft.fft(self._y, n)
+        y_fft = y_fft_full[L]
+
+        freq_full = (1/(dt*n)) * np.arange(n)           # Create array of frequencies
+        freq = freq_full[L]
+        omega = 2.0 * np.pi * freq                      # Convert from Hz to rad/s, omega = 2 * pi * f
+        omega = omega.reshape((1, len(omega)))      # Make it of shape (1,n_f), instead of (n_f,)
+
+        # 2- Estimated plant, \hat{P} at all frequencies
+        P_hat = y_fft/u_fft
+        P_hat = P_hat.reshape((1,len(P_hat)))
+
+        # 3- compute controller at all frequencies
+        a = np.array(self._a)
+        b = np.array(self._b)
+        cnt_num = b.reshape((len(b),1))     # Controller numerator coefficients. Make it of shape (n_b,1), instead of (n_b,)
+        cnt_den = a.reshape((len(a),1))     # Controller denominator coefficients. Make it of shape (n_a,1), instead of (n_a,)
+
+        a_seq = np.arange(0,len(a))               # Used to build exp array [exp(0), exp(1), exp(2), ...]^T
+        a_seq = np.reshape(a_seq, (len(a_seq), 1)) * -1j * dt
+
+        b_seq = np.arange(0,len(b))               # [0, 1, 2, ...]^T
+        b_seq = np.reshape(b_seq, (len(b_seq), 1)) * -1j * dt   # [0, -j*dt, -2j*dt, ...]^T
+
+        a_mat = a_seq * omega                           # Controller denominator. Each column vector corersonds to the controller denominator terms at specific omega
+                                                        # Example, each column vector a_mat[:,0] = [0, -j*dt*omega_0, -2j*dt*omega_0, ...]^T
+        b_mat = b_seq * omega
+
+        a_mat_exp = np.exp(a_mat)                       # Each column: [1.0, exp(-j*w_i*dt), exp(-2j*w_i*dt), ...]^T
+        a_mat_exp = cnt_den * a_mat_exp                 # Each column: [1.0, a_1*exp(-j*w_i*dt), a_2*exp(-2j*w_i*dt), ...]^T
+        b_mat_exp = np.exp(b_mat)                       # Each column: [1.0, exp(-j*w_i*dt), exp(-2j*w_i*dt), ...]^T
+        b_mat_exp = cnt_num * b_mat_exp                 # Each column: [b_0, b_1*exp(-j*w_i*dt), b_2*exp(-2j*w_i*dt), ...]^T
+
+        a_omega = np.sum(a_mat_exp, axis=0)             # Summ all the rows. The result is the controller's denominator at all omegas
+        b_omega = np.sum(b_mat_exp, axis=0)             # Summ all the rows. The result is the controller's numerator at all omegas
+        cnt_omega = b_omega / a_omega                   # Finally, compute controller at all omegas, a row vector
+
+        # 4- Compute the maximum sensitivity
+        s = 1.0 / (1.0 + cnt_omega*P_hat)
+        s_abs = np.abs(s)                               # Magnitude of the sensitivity function, at all omegas       
+        s_argmax = np.argmax(s_abs)                     # The index of the maximum sensitivity
+        s_max = s_abs[0][s_argmax]                      # Maximum sensitivity
+        omega_max = omega[0][s_argmax]                  # Frequency at max sensitivity, rad/s
+        f_max = freq[s_argmax]                          # Frequency at max sensitivity, Hz
+
+        ret=(s_max, omega_max, f_max)
+
+        return ret
+
 
     ################## Setter functions ##################
     def setSignals(self, r=None, u=None, y=None):

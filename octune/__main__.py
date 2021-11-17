@@ -16,7 +16,7 @@ def main():
     cnt.setDebug(val=False)
     
     # Build a stable discrete plant with two real poles within the unit circle
-    # denominator z^2+(pole1+pole2)z+(pole1*pole2
+    # denominator z^2+(pole1+pole2)z+(pole1*pole2)
     pole1=0.4
     pole2=-0.3
     a0=1.0
@@ -53,6 +53,8 @@ def main():
     kp_list=[kp]
     ki_list=[ki]
     kd_list=[kd]
+    s_max_list = []
+    f_max_list = []
 
     ############ Optimization ############
     opt=BackProbOptimizer()
@@ -60,6 +62,9 @@ def main():
     # Initial data
     opt.setSignals(r=r,u=u,y=y)
     opt.setContCoeffs(den_coeff=[1,-1,0], num_coeff=[n0,n1,n2])
+    s_max, w_max, f_max = opt.maxSensitivity(dt=dt)
+    s_max_list.append(s_max)
+    f_max_list.append(f_max)
 
     for i in range(1,max_iter+1):
         if(opt.update(iter=i)):
@@ -84,6 +89,9 @@ def main():
             # Update optimizer
             opt.setSignals(r=r,u=u,y=y)
             opt.setContCoeffs(den_coeff=[1,-1,0], num_coeff=num)
+            s_max, w_max, f_max = opt.maxSensitivity(dt=dt)
+            s_max_list.append(s_max)
+            f_max_list.append(f_max)
         else:
             print("\n[ERROR] [main] Could not perform update step\n")
             break
@@ -109,6 +117,18 @@ def main():
     plt.plot(kd_list, label='Kd')
     plt.xlabel('iteration number')
     plt.ylabel('Gain value')
+    plt.legend()
+    plt.show()
+    
+    plt.plot(s_max_list, label='Maximum sensitivity')
+    plt.xlabel('iteration number')
+    plt.ylabel('s_max')
+    plt.legend()
+    plt.show()
+
+    plt.plot(f_max_list, label='Frequency at maximum sensitivity')
+    plt.xlabel('iteration number')
+    plt.ylabel('Frequency (Hz)')
     plt.legend()
     plt.show()
 
