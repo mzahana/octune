@@ -65,9 +65,10 @@ class BackProbOptimizer:
 
         # Optimization learning rate
         self._alpha=0.001
+        self._use_optimal_alpha = True
 
         # ADAM optimizer parameters
-        self._use_adam=True # True: Use  ADAM algorithm (recommended); False: Use regular gradient descent algorithm
+        self._use_adam=False # True: Use  ADAM algorithm (recommended); False: Use regular gradient descent algorithm
         self._beta1=0.9
         self._beta2=0.999
         self._eps=10e-8
@@ -116,7 +117,7 @@ class BackProbOptimizer:
             print("[ERROR] [backward] b coeffs are None.")
             return False
 
-        # compute error
+        # compute error vector
         self._error = self._r - self._y
         # Compute objective
         self._objective = 0.5 * np.linalg.norm(self._error)**2
@@ -151,6 +152,9 @@ class BackProbOptimizer:
         
         self._dL_db = np.sum(dL_dy * dy_du * db, axis=0)
 
+        # Calculate the Jacobain matrix J_b
+        J_b = (dy_du * db).transpose()
+
         # Partial derivatives w.r.t conroller denominator coeffs, a
         # Compute forward sensitivities w.r.t. the controller's a_i parameters
         n_a = len(self._a) # Number of a coeffs
@@ -164,6 +168,27 @@ class BackProbOptimizer:
         # Note that the gradient dL_da does not include the one for a[0], because it's constant, a[0]=1
         # dL_da[0] is the derivative of L w.r.t. a[1]
         self._dL_da = np.sum(dL_dy * dy_du * da, axis=0)
+
+        # Calculate the Jacobain matrix J_a
+        J_a = (dy_du * da).transpose()
+
+        # Finally construct J
+        J = np.vstack((J_a, J_b))
+
+        JJ = -1.0 * np.matmul(J, J.transpose())
+        # Absolute value of smallest Eigen value
+        (eigVals, eigVec) = np.linalg.eig(JJ)
+        lamd = abs(min(eigVals))
+        if(self._debug):
+            print("Absolute value of smallest Eigen value of -1*J J^T = {} \n".format(lamd))
+
+        # Optimal learning rate
+        alpha = 2./lamd
+        if(self._use_optimal_alpha):
+            self._alpha = alpha - 0.01*alpha # just subtract a small amount to maintain positive definiteness
+
+        if(self._debug):
+            print("Optimal learning rate alpha={}".format(alpha))
 
         if(self._debug):
             print("\n[DEBUG] [backward] Done with back probagation\n")
@@ -221,8 +246,16 @@ class BackProbOptimizer:
                 return True
             else:
                 # TODO Use regular gradient descent algorithm
-                print("\n[WARNING] [update] Regular gradient descent is not yet implemented.\n")
-                return False
+                new_a = self._a[1:] - self._alpha * self._dL_da
+                self._new_a = np.zeros(len(self._a))
+                self._new_a[0]=1.0
+                self._new_a[1:] = new_a # first element a[0] is always = 1
+
+                new_b = self._b - self._alpha * self._dL_db
+                self._new_b = new_b
+
+                # print("\n[WARNING] [update] Regular gradient descent is not yet implemented.\n")
+                return True
         else:
             print("\n[ERROR] [update] Error in backward(). Returned False\n")
             return False
