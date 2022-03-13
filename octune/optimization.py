@@ -57,15 +57,27 @@ class BackProbOptimizer:
         self._dL_da=None    # Partial derivatives w.r.t to controller denomentator's coeffs, a
         self._dL_db=None    # Partial derivatives w.r.t to controller numerator's coeffs, b
 
+        # Maximum numer of iterations
+        self._max_iter= None
         # Optimization objective function
         self._objective=None
+        # List computed the value of the objective function. Useful for plotting
+        self._performance_list = []
+        # Max number of objective values, to avoid blowing up the self._performance_list
+        self._size_performance_list = 1000
         # Error array between reference signal _r and system output _y
         self._error=None
 
 
         # Optimization learning rate
         self._alpha=0.001
+        # List of learning rates for different iterations
+        self._alpha_list = []
         self._use_optimal_alpha = True
+        # Jacobian smalled eigne value
+        self._smallest_eig_val=0
+        # List of smallest jacobian eigen value in different iterations
+        self._eig_val_list = []
 
         # ADAM optimizer parameters
         self._use_adam=False # True: Use  ADAM algorithm (recommended); False: Use regular gradient descent algorithm
@@ -134,7 +146,7 @@ class BackProbOptimizer:
         y_shifted[0]=0.0
         dy_du = (self._y-y_shifted)/(self._u-u_shifted)
         # Handle inf/nan elements (for now, replace nan by 0, inf by a large number and copy sign)
-        #dy_du = np.nan_to_num(dy_du, posinf=0.0, neginf=0.0)
+        #dy_du = np.nan_to_num(dy_du, posinf=0.0, neginf=0.0) # only in numpy>= 1.17
         dy_du = np.nan_to_num(dy_du)
         dy_du = np.reshape(dy_du, (len(dy_du), 1))
 
@@ -179,13 +191,14 @@ class BackProbOptimizer:
         # Absolute value of smallest Eigen value
         (eigVals, eigVec) = np.linalg.eig(JJ)
         lamd = abs(min(eigVals))
+        self._smallest_eig_val = lamd
         if(self._debug):
             print("Absolute value of smallest Eigen value of -1*J J^T = {} \n".format(lamd))
 
         # Optimal learning rate
         alpha = 2./lamd
         if(self._use_optimal_alpha):
-            self._alpha = alpha - 0.01*alpha # just subtract a small amount to maintain positive definiteness
+            self._alpha = alpha - 0.1*alpha # just subtract a small amount to maintain positive definiteness
 
         if(self._debug):
             print("Optimal learning rate alpha={}".format(alpha))
@@ -245,7 +258,7 @@ class BackProbOptimizer:
                     
                 return True
             else:
-                # TODO Use regular gradient descent algorithm
+                # Use regular gradient descent algorithm
                 new_a = self._a[1:] - self._alpha * self._dL_da
                 self._new_a = np.zeros(len(self._a))
                 self._new_a[0]=1.0
@@ -428,6 +441,32 @@ class BackProbOptimizer:
 
         self._a = den_coeff
         self._b = num_coeff
+
+    def updateAlphaList(self):
+        self._alpha_list.append(self._alpha)
+
+    def resetAlphaList(self):
+        self._alpha_list = []
+
+    def updatePerformanceList(self):
+        self._performance_list.append(self._objective)
+
+    def resetPerformanceList(self):
+        self._performance_list = []
+
+    def updateEigValList(self):
+        self._eig_val_list.append(self._smallest_eig_val)
+    
+    def resetEigValList(self):
+        self._eig_val_list= []
+
+    def resetLists(self):
+        """Resets all lists
+        """
+        self.resetAlphaList()
+        self.resetEigValList()
+        self.resetPerformanceList()
+
 
     ################ Getter functions ################
 
