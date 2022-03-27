@@ -78,6 +78,8 @@ class BackProbOptimizer:
         self._smallest_eig_val=0
         # List of smallest jacobian eigen value in different iterations
         self._eig_val_list = []
+        # Objective weight, higher values means more penality
+        self._obj_w = 1.0
 
         # ADAM optimizer parameters
         self._use_adam=False # True: Use  ADAM algorithm (recommended); False: Use regular gradient descent algorithm
@@ -132,10 +134,10 @@ class BackProbOptimizer:
         # compute error vector
         self._error = self._r - self._y
         # Compute objective
-        self._objective = 0.5 * np.linalg.norm(self._error)**2
+        self._objective = 0.5 * self._obj_w * np.linalg.norm(self._error)**2
 
         # Partial derivatives w.r.t system output, y
-        self._dL_dy = -1.0 * (self._error)
+        self._dL_dy = -1.0 * self._obj_w * (self._error)
         dL_dy = np.reshape(self._dL_dy, (len(self._dL_dy), 1))
 
         # Partial derivatives w.r.t controller output, u
@@ -145,6 +147,7 @@ class BackProbOptimizer:
         y_shifted = np.roll(self._y,1)
         y_shifted[0]=0.0
         dy_du = (self._y-y_shifted)/(self._u-u_shifted)
+        # dy_du = self._y/self._u
         # Handle inf/nan elements (for now, replace nan by 0, inf by a large number and copy sign)
         #dy_du = np.nan_to_num(dy_du, posinf=0.0, neginf=0.0) # only in numpy>= 1.17
         dy_du = np.nan_to_num(dy_du)
@@ -198,7 +201,7 @@ class BackProbOptimizer:
         # Optimal learning rate
         alpha = 2./lamd
         if(self._use_optimal_alpha):
-            self._alpha = alpha - 0.1*alpha # just subtract a small amount to maintain positive definiteness
+            self._alpha = alpha - 0.05*alpha # just subtract a small amount to maintain positive definiteness
 
         if(self._debug):
             print("Optimal learning rate alpha={}".format(alpha))
