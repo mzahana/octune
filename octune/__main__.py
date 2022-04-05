@@ -59,6 +59,8 @@ def main():
     ############ Optimization ############
     opt=BackProbOptimizer()
     opt._debug=True
+    opt._use_optimal_alpha = True
+    opt._use_adam = False
     # Initial data
     opt.setSignals(r=r,u=u,y=y)
     opt.setContCoeffs(den_coeff=[1,-1,0], num_coeff=[n0,n1,n2])
