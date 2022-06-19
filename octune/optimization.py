@@ -201,7 +201,7 @@ class BackProbOptimizer:
         # Optimal learning rate
         alpha = 2./lamd
         if(self._use_optimal_alpha):
-            self._alpha = alpha - 0.05*alpha # just subtract a small amount to maintain positive definiteness
+            self._alpha = alpha - 0.1*alpha # just subtract a small amount to maintain positive definiteness
 
         if(self._debug):
             print("Optimal learning rate alpha={}".format(alpha))
