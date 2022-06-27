@@ -74,7 +74,8 @@ class BackProbOptimizer:
         # List of learning rates for different iterations
         self._alpha_list = []
         self._use_optimal_alpha = True
-        # Jacobian smalled eigne value
+        self._alpha_factor = 0.1 # reduction factor from optimal self._alpha \in [0,1)
+        # Jacobian smallest eigen value
         self._smallest_eig_val=0
         # List of smallest jacobian eigen value in different iterations
         self._eig_val_list = []
@@ -201,7 +202,7 @@ class BackProbOptimizer:
         # Optimal learning rate
         alpha = 2./lamd
         if(self._use_optimal_alpha):
-            self._alpha = alpha - 0.1*alpha # just subtract a small amount to maintain positive definiteness
+            self._alpha = alpha*(1.0- self._alpha_factor) # just subtract a small amount to maintain positive definiteness
 
         if(self._debug):
             print("Optimal learning rate alpha={}".format(alpha))
@@ -469,6 +470,53 @@ class BackProbOptimizer:
         self.resetAlphaList()
         self.resetEigValList()
         self.resetPerformanceList()
+
+    def isConverged(self, count=None, err_threshold=None):
+        """A convergence measure.
+        Returns True (converged) if the average of the last (count) of the _objective array <=  err_threshold
+        False otherwise
+        Params
+        --
+        @param count [int] Number of last objective values to average
+        @param err_threshold [double] Err threshold on the average value of the _objective values
+
+        Return
+        --
+        @return True: if the average of the last (count) of the _objective array <=  err_threshold. False otherwise
+        """
+        if (count is None):
+            print("[checkConvergence] ERROR: count value is None ")
+            return False
+        if (count < 1):
+            print("[checkConvergence] ERROR: count value {} < 1 ".format(count))
+            return False
+
+        if (err_threshold is None):
+            print("[checkConvergence] ERROR: err_threshold value is None ")
+            return False
+        if (err_threshold  < 0):
+            print("[checkConvergence] ERROR: err_threshold value {} < 0 ".format(err_threshold))
+            return False
+
+        if (self._performance_list is None):
+            if(self._debug):
+                print("[checkConvergence]: _performance_list is None")
+            return False
+
+        if (len(self._performance_list) < count):
+            if (self._debug):
+                    print("[checkConvergence] Not enough objective values: {}. Required count is {}".format(len(self._performance_list), count))
+            return False
+
+        count = int(count)
+        err_vals = self._performance_list[-count:]
+        avg = np.average( np.array(err_vals) )
+
+        if (avg <= err_threshold):
+            return True
+        else:
+            return False
+
 
 
     ################ Getter functions ################
