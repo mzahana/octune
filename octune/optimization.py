@@ -73,7 +73,7 @@ class BackProbOptimizer:
         self._alpha=0.001
         # List of learning rates for different iterations
         self._alpha_list = []
-        self._use_optimal_alpha = True
+        self._use_optimal_alpha = True # Recommended
         self._alpha_factor = 0.1 # reduction factor from optimal self._alpha \in [0,1)
         # Jacobian smallest eigen value
         self._smallest_eig_val=0
@@ -83,7 +83,7 @@ class BackProbOptimizer:
         self._obj_w = 1.0
 
         # ADAM optimizer parameters
-        self._use_adam=False # True: Use  ADAM algorithm (recommended); False: Use regular gradient descent algorithm
+        self._use_adam=False # True: Use  ADAM algorithm ; False: Use regular gradient descent algorithm
         self._beta1=0.9
         self._beta2=0.999
         self._eps=10e-8
